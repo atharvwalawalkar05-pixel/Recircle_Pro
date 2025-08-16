@@ -1,21 +1,43 @@
 require('dotenv').config();
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+const authRoutes = require('./routes/authRoutes');
+const itemRoutes = require('./routes/itemRoutes');
 
-console.log("===================================");
-console.log("Attempting to start the SIMPLEST server...");
+async function startServer() {
+  try {
+    const app = express();
+    const PORT = process.env.PORT || 5000;
+    const MONGO_URI = process.env.MONGO_URI;
 
-app.use(express.json());
-app.use(cors());
+    if (!MONGO_URI) {
+      console.error("FATAL ERROR: MONGO_URI environment variable is not set.");
+      process.exit(1);
+    }
+    
+    await mongoose.connect(MONGO_URI);
+    console.log("MongoDB connected successfully!");
 
-app.get('/', (req, res) => {
-  res.send('The simple server is running!');
-});
+    app.use(express.json());
+    app.use(cors());
 
-app.listen(PORT, () => {
-  console.log(`Simple server is LIVE on port ${PORT}`);
-  console.log("===================================");
-});
+    app.use('/api/auth', authRoutes);
+    app.use('/api/items', itemRoutes);
+
+    app.get('/', (req, res) => {
+      res.send('ReCircle Backend API is running!');
+    });
+
+    app.listen(PORT, () => {
+      console.log(`Server running successfully on port ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("SERVER FAILED TO START:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
