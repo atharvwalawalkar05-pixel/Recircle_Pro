@@ -71,16 +71,31 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/items
 // @access  Private
 router.post('/', protect, async (req, res) => {
-  const { title, description, category, condition, itemType, image } = req.body;
   try {
+    // --- CHANGE START ---
+    // Destructure 'images' array instead of 'image' string
+    const { title, description, images, category, condition, itemType } = req.body;
+
+    // Basic validation
+    if (!images || images.length === 0) {
+      return res.status(400).json({ message: 'At least one image is required' });
+    }
+
     const item = new Item({
-      title, description, category, condition, itemType, image, user: req.user._id,
+      title,
+      description,
+      images, // Use the images array here
+      category,
+      condition,
+      itemType,
+      user: req.user._id
     });
+    // --- CHANGE END ---
+
     const createdItem = await item.save();
     res.status(201).json(createdItem);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server Error' });
+    res.status(400).json({ message: 'Error creating item', error: error.message });
   }
 });
 
@@ -91,15 +106,23 @@ router.put('/:id', protect, async (req, res) => {
   const { title, description, category, condition, itemType } = req.body;
   try {
     const item = await Item.findById(req.params.id);
+
     if (item) {
+      // Ensure the user owns the item
       if (item.user.toString() !== req.user._id.toString()) {
         return res.status(401).json({ message: 'Not authorized' });
       }
-      item.title = title || item.title;
-      item.description = description || item.description;
-      item.category = category || item.category;
-      item.condition = condition || item.condition;
-      item.itemType = itemType || item.itemType;
+
+      // --- CHANGE START ---
+      // Update fields, including the 'images' array
+      item.title = req.body.title || item.title;
+      item.description = req.body.description || item.description;
+      item.images = req.body.images || item.images; // Update images
+      item.category = req.body.category || item.category;
+      item.condition = req.body.condition || item.condition;
+      item.itemType = req.body.itemType || item.itemType;
+      // --- CHANGE END ---
+
       const updatedItem = await item.save();
       res.json(updatedItem);
     } else {
